@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Neue Zugänge</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; font-size: .85em;
+      margin: 20px; 
+      background-color: #b2e2b2; /* Hellgrauer Hintergrund statt weiß */
+    }
+    h3 { margin-bottom: 20px; color: darkblue; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    td:nth-child(2), td:nth-child(6) { text-align: right; } /* Betragsspalte (2. Spalte) rechtsbündig */
+    th { background-color: #f2f2f2; cursor: pointer; }
+    th:hover { background-color: #e2e2e2; }
+    tr:nth-child(even) { background-color: #a7d688; }
+
+    .rechnung { background-color: #FFEB3B; font-weight: bold; padding: 2px 4px; border-radius: 3px; cursor: pointer; }
+    .betrag { background-color: #347237; color: white; font-weight: bold; padding: 2px 4px; border-radius: 3px; cursor: pointer; }
+    .highlighted-row { background-color: #9da6c9 !important; } /* Hervorgehobene Zeile */
+    .crtime {font-size: .7em;} 
+    .rui {font-size: .8em; background: #D771B9; padding: .3em; }
+    .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .poppy-link { color: white; background-color: #007bff; text-decoration: none; font-weight: bold;
+      padding: 8px 16px; border-radius: 5px; font-size: 14px; }
+  
+    .poppy-link:hover { background-color: #0056b3; text-decoration: underline; }
+    
+    
+  </style>
+</head>
+<body>
+  <div class="header-row">
+    <span class="crtime">02.09 15:45</span>
+    <a target='_blank' href="http://192.168.73.10/letsrock/pages/opos.php" class="poppy-link">Poppy</a>
+  </div>
+  <h3>Neue Zugänge (3 Einträge)</h3>
+  
+  <table>
+    <thead>
+      <tr>
+        <th>Buchungsdatum</th>
+        <th>Betrag</th>
+        <th>Währung</th>
+        <th>Zusatzinformationen</th>
+        <th>Überweisungsinformationen</th>
+        <th>Kd Nr</th>
+        <th>Zahler</th>
+      </tr>
+    </thead>
+    <tbody>
+<tr class="transaction-row">
+  <td class='copy'>02.09.2025</td>
+  <td><span class="betrag copy">1048.41</span></td>
+  <td>EUR</td>
+  <td>GUTSCHRIFT ÜBERWEISUNG</td>
+  <td>RG<span class="rechnung copy">202500544</span>, <span class="rechnung copy">202500545</span>, <span class="rechnung copy">202500547</span></td>
+  <td class='copy'>305</td>
+  <td>St. Barbara-Klinik Hamm GmbH</td>
+</tr>
+<tr class="transaction-row">
+  <td class='copy'>02.09.2025</td>
+  <td><span class="betrag copy">674.73</span></td>
+  <td>EUR</td>
+  <td>GUTSCHRIFT ÜBERWEISUNG</td>
+  <td>/RG:RA <span class="rechnung copy">202500506</span></td>
+  <td class='copy'>491</td>
+  <td>AMEOS Spitalgesell.                                                   Halle (Saale)</td>
+</tr>
+<tr class="transaction-row">
+  <td class='copy'>01.09.2025</td>
+  <td><span class="betrag copy">892.50</span></td>
+  <td>EUR</td>
+  <td>GUTSCHRIFT ÜBERWEISUNG</td>
+  <td>Kd/Re<span class="rechnung copy">202500531</span>/4.8.2025/</td>
+  <td class='copy'>1122</td>
+  <td>Rotkreuzklinikum Munchen gemeinnutzige GmbH</td>
+</tr>
+    </tbody>
+  </table>
+
+<script>
+
+
+function fallbackCopyTextToClipboard(text) {
+  var textArea = document.createElement("textarea");
+  textArea.value = text;
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+
+  try {
+    var successful = document.execCommand('copy');
+    var msg = successful ? 'successful' : 'unsuccessful';
+    console.log('Fallback: Copying text command was ' + msg);
+  } catch (err) {
+    console.error('Fallback: Oops, unable to copy', err);
+  }
+
+  document.body.removeChild(textArea);
+}
+
+function copyTextToClipboard(text) {
+  if (!navigator.clipboard) {
+    fallbackCopyTextToClipboard(text);
+    return;
+  }
+  navigator.clipboard.writeText(text).then(function() {
+    console.log('Async: Copying to clipboard was successful!');
+  }, function(err) {
+    console.error('Async: Could not copy text: ', err);
+  });
+}
+
+// Header-Klick für sichtbare Tabellen-Zeilen kopieren
+document.querySelector('table thead').addEventListener('click', function(event) {
+  const table = this.closest('table');
+  
+  // Kopiere nur sichtbare Zeilen
+  const visibleTableHtml = createVisibleTableHtml(table);
+  copyTextToClipboard(visibleTableHtml);
+  
+  // Feedback
+  this.style.backgroundColor = '#a2297e';
+  setTimeout(() => {
+    this.style.backgroundColor = '';
+  }, 400);
+  
+  event.stopPropagation();
+});
+
+// Erstelle HTML nur mit sichtbaren Zeilen
+function createVisibleTableHtml(originalTable) {
+  const newTable = originalTable.cloneNode(false); // Nur table-Element, ohne Inhalt
+  const thead = originalTable.querySelector('thead').cloneNode(true);
+  const tbody = document.createElement('tbody');
+  
+  // Füge Kopfzeile hinzu
+  newTable.appendChild(thead);
+  
+  // Füge nur sichtbare Zeilen hinzu
+  const visibleRows = originalTable.querySelectorAll('tbody .transaction-row:not(.hidden-row)');
+  visibleRows.forEach(row => {
+    tbody.appendChild(row.cloneNode(true));
+  });
+  
+  newTable.appendChild(tbody);
+  
+  // Erstelle komplette HTML-Struktur mit Styles
+  const html = `
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <style>
+      body { font-family: Arial, sans-serif; font-size: .85em; margin: 20px; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      td:nth-child(2), td:nth-child(6) { text-align: right; }
+      th { background-color: #f2f2f2; }
+      tr:nth-child(even) { background-color: #f9f9f9; }
+      .rechnung { background-color: #FFEB3B; font-weight: bold; padding: 2px 4px; border-radius: 3px; }
+      .betrag { background-color: #347237; color: white; font-weight: bold; padding: 2px 4px; border-radius: 3px; }
+      .rui { font-size: .8em; background: #D771B9; padding: .3em; }
+    </style>
+  </head>
+  <body>
+    <h3>Gefilterte Transaktionen (${visibleRows.length} Einträge)</h3>
+    ${newTable.outerHTML}
+  </body>
+  </html>`;
+  
+  return html;
+}
+
+document.querySelectorAll('.copy').forEach(codeBlock => {
+  codeBlock.addEventListener('click', function(event) {
+    const codeText = this.innerText;
+    copyTextToClipboard(codeText);
+    
+    // Farbänderung für Klick-Feedback
+    this.style.backgroundColor = '#a2297e';  // Lila Farbe als Feedback
+    setTimeout(() => {
+      this.style.backgroundColor = '';
+    }, 400);
+    
+    // Finde übergeordnete Zeile und markiere sie
+    const parentRow = this.closest('tr');
+    if (parentRow) {
+      // Entferne Hervorhebung von allen Zeilen
+      document.querySelectorAll('tr').forEach(row => {
+        row.classList.remove('highlighted-row');
+      });
+      
+      // Hebe die aktuelle Zeile hervor
+      parentRow.classList.add('highlighted-row');
+    }
+    
+    // Verhindern, dass das Event zum Elternelement weitergeleitet wird
+    event.stopPropagation();
+  });
+});
+</script>
+</body>
+</html>

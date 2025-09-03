@@ -1,0 +1,170 @@
+# html_generator.rb
+# Klasse zur Erstellung von HTML-Berichten aus Transaktionsdaten
+
+class HTMLGenerator
+  def self.format_german_date(date_string)
+    # Von "2025-05-07" zu "07.05.2025"
+    date = Date.parse(date_string)
+    date.strftime("%d.%m.%Y")
+  rescue
+    date_string # Fallback bei ungültigem Datum
+  end
+  def self.erstelle_bericht(transaktionen, zeitstempel)
+    # Formatierter Zeitstempel für die Überschrift
+    zeitstempel_anzeige = zeitstempel || "unbekannt"
+    
+    html = <<~HTML
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Transaktionsübersicht</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; font-size: .85em;
+            margin: 20px; 
+            background-color: #b2e2b2; /* Hellgrauer Hintergrund statt weiß */
+          }
+          h3 { margin-bottom: 20px; color: darkblue; }
+          table { border-collapse: collapse; width: 100%; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          td:nth-child(2), td:nth-child(6) { text-align: right; } /* Betragsspalte (2. Spalte) rechtsbündig */
+          th { background-color: #f2f2f2; }
+          tr:nth-child(even) { background-color: #a7d688; }
+
+          .rechnung { background-color: #FFEB3B; font-weight: bold; padding: 2px 4px; border-radius: 3px; cursor: pointer; }
+          .betrag { background-color: #347237; color: white; font-weight: bold; padding: 2px 4px; border-radius: 3px; cursor: pointer; }
+          .highlighted-row { background-color: #9da6c9 !important; } /* Hervorgehobene Zeile */
+          .crtime {font-size: .7em;} 
+          .rui {font-size: .8em; background: #D771B9; padding: .3em; }
+        </style>
+      </head>
+      <body><table><tr><td>
+        <h3>Gutschriftenübersicht bis #{zeitstempel_anzeige}</h3></td><td><a target="_blank" href="http://192.168.73.10/letsrock/pages/opos.php">FIBU Poppy</a> </td>
+        </tr></table>
+        <table>
+          <tr>
+            <th>Buchungsdatum</th>
+            <th>Betrag</th>
+            <th>Währung</th>
+            <th>Zusatzinformationen</th>
+            <th>Überweisungsinformationen</th>
+            <th>Kd Nr</th>
+            <th>Zahler</th>
+          </tr>
+    HTML
+    
+    transaktionen.each do |transaktion|
+      # Prüfe, ob "erstattung" in Überweisungsinformationen vorkommt (case-insensitive)
+      if transaktion[:ueberweisungsinformationen].downcase.include?('erstatt')
+        next  # Überspringe diese Transaktion
+      end
+      #überweisunginfo bereinigen, nur  die rechnungs infos alles was vor FI-UMSATZ und direkt danach kann weg  
+      mtch = transaktion[:ueberweisungsinformationen].match(/FI-UMSATZ.*?\s(.*)/)
+      uinfo_pur = mtch ? mtch[1] :  transaktion[:ueberweisungsinformationen]
+      
+      # Rechnungsnummern im Format 2XXXXXXXX hervorheben (z.B. 202500219)
+      ueberweisungsinformationen = uinfo_pur.gsub(/(202\d{6})/) do |rechnungsnr|
+        "<span class=\"rechnung copy\">#{rechnungsnr}</span>"
+      end
+      
+      # Beträge in Überweisungsinformationen hervorheben
+      ueberweisungsinformationen = ueberweisungsinformationen.gsub(/(?<!\d\.)(?<!\d-)(?<!\d:)(?<!\d\/)\b(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})(?!\.\d|\-\d|\:\d|\/\d)\b/) do |betrag|
+        "<span class=\"betrag copy\">#{betrag}</span>"
+      end
+      
+      # Betrag in der Betragsspalte auch mit der Klasse "betrag copy" formatieren
+      formatierter_betrag = "<span class=\"betrag copy\">#{transaktion[:betrag]}</span>"
+      zahler = transaktion[:zahler_empfaenger]
+      zahler += "<br><span class=\"rui\">#{transaktion[:rui]}</span>" unless transaktion[:rui].nil?
+      zusatzinfos = transaktion[:zusatzinformationen]
+      zusatzinfos = "<span class=\"rui\">#{zusatzinfos}</span>" if zusatzinfos.match(/RÜCKÜBERWEISUNG/i)
+
+      html += <<~HTML
+        <tr>
+          <td class='copy'>#{format_german_date(transaktion[:buchungsdatum])}</td>
+          <td>#{formatierter_betrag}</td>
+          <td>#{transaktion[:waehrung]}</td>
+          <td>#{zusatzinfos}</td>
+          <td>#{ueberweisungsinformationen}</td>
+          <td class='copy'>#{transaktion[:kdnr]}</td>
+          <td>#{zahler}</td>
+        </tr>
+      HTML
+    end
+    
+    html += <<~HTML
+        </table>
+      
+      <script>
+      function fallbackCopyTextToClipboard(text) {
+        var textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+          var successful = document.execCommand('copy');
+          var msg = successful ? 'successful' : 'unsuccessful';
+          console.log('Fallback: Copying text command was ' + msg);
+        } catch (err) {
+          console.error('Fallback: Oops, unable to copy', err);
+        }
+
+        document.body.removeChild(textArea);
+      }
+
+      function copyTextToClipboard(text) {
+        if (!navigator.clipboard) {
+          fallbackCopyTextToClipboard(text);
+          return;
+        }
+        navigator.clipboard.writeText(text).then(function() {
+          console.log('Async: Copying to clipboard was successful!');
+        }, function(err) {
+          console.error('Async: Could not copy text: ', err);
+        });
+      }
+
+      document.querySelectorAll('.copy').forEach(codeBlock => {
+        codeBlock.addEventListener('click', function(event) {
+          const codeText = this.innerText;
+          copyTextToClipboard(codeText);
+          
+          // Farbänderung für Klick-Feedback
+          this.style.backgroundColor = '#a2297e';  // Lila Farbe als Feedback
+          setTimeout(() => {
+            this.style.backgroundColor = '';
+          }, 400);
+          
+          // Finde übergeordnete Zeile und markiere sie
+          const parentRow = this.closest('tr');
+          if (parentRow) {
+            // Entferne Hervorhebung von allen Zeilen
+            document.querySelectorAll('tr').forEach(row => {
+              row.classList.remove('highlighted-row');
+            });
+            
+            // Hebe die aktuelle Zeile hervor
+            parentRow.classList.add('highlighted-row');
+          }
+          
+          // Verhindern, dass das Event zum Elternelement weitergeleitet wird
+          event.stopPropagation();
+        });
+      });
+      </script>
+      </body>
+      </html>
+    HTML
+    
+    return html
+  end
+  
+  def self.speichere_bericht(html, verzeichnis)
+    output_path = File.join(verzeichnis, 'transaktionen.html')
+    File.write(output_path, html)
+    puts "Bericht erstellt: #{output_path}"
+  end
+end

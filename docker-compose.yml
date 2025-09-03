@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  ta-gutschriften:
+    build: .
+    volumes:
+      - ./kontoauszuge:/app/kontoauszuge:z
+      - ./scripts:/app/scripts:z
+    environment:
+      - INTERVAL_MINUTES=5
+      - TZ=Europe/Berlin
+    #restart: always

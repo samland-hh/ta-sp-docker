@@ -1,0 +1,8 @@
+# alle ZIP-Dateien ignorieren
+*.zip
+
+# alle HTML-Dateien ignorieren
+*.html
+
+# Ausnahme: diese Datei trotzdem verfolgen
+!/kontoauszuge/neue_zugange.html
